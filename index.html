@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數神麻雀 Math-jong</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2E8B57; /* 麻雀枱綠色 */
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        .board {
+            width: 90%;
+            max-width: 800px;
+            background-color: #3CB371;
+            border: 5px solid #8B4513; /* 木框 */
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .area-title { margin: 10px 0 5px; font-weight: bold; color: #FFF8DC; }
+        .deck-area, .discard-area, .hand-area {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            min-height: 80px;
+            padding: 10px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        /* 麻雀牌 CSS 設計 */
+        .tile {
+            width: 50px;
+            height: 70px;
+            background-color: #FFFAFA;
+            color: #333;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.3), inset -2px -2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s, margin-top 0.1s;
+        }
+        .tile:hover { transform: translateY(-5px); background-color: #fff; }
+        .tile.deck { background-color: #DAA520; color: transparent; cursor: pointer; } /* 牌背 */
+        .tile.deck:hover { background-color: #FFD700; }
+        
+        /* 操作按鈕 */
+        .controls { display: flex; gap: 15px; margin-top: 20px; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #FFD700;
+            color: #8B4513;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        button:hover { background-color: #FFF8DC; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 18px; color: #FFF8DC; }
+    </style>
+</head>
+<body>
+
+    <h1>🀄 數神麻雀 Math-jong (特訓版)</h1>
+    <p>遊戲目標：摸牌與打牌，湊齊 3組面子 + 1對眼 (共11張)。</p>
+
+    <div class="board">
+        <div class="area-title">牌堆 (點擊摸牌) - 剩餘: <span id="deck-count">0</span></div>
+        <div class="deck-area" id="deck-area">
+            <div class="tile deck" onclick="drawCard()">🀄</div>
+        </div>
+
+        <div class="area-title">棄牌堆 (其他人打出的牌)</div>
+        <div class="discard-area" id="discard-area"></div>
+
+        <div class="area-title">你的手牌 (點擊打出)</div>
+        <div class="hand-area" id="hand-area"></div>
+    </div>
+
+    <div class="controls">
+        <button onclick="sortHand()">整理手牌</button>
+        <button onclick="declareWin()" id="win-btn" disabled>宣告食糊！</button>
+        <button onclick="initGame()">重新開始</button>
+    </div>
+    <div id="status">準備開始...</div>
+
+    <script>
+        // 定義牌組 (加入正負數、分數、指數)
+        const baseCards = ['-3', '-2', '-1', '0', '1', '2', '3', '4', '5', '1/2', '0.5', '2²', '4', '√16', 'x'];
+        let deck = [];
+        let playerHand = [];
+        let discardPile = [];
+        const HAND_SIZE = 10;
+
+        // 初始化遊戲
+        function initGame() {
+            // 生成牌堆 (每張牌重複 4 次，總共 60 張作為示範)
+            deck = [];
+            for (let i = 0; i < 4; i++) {
+                deck = deck.concat(baseCards);
+            }
+            shuffle(deck);
+            
+            playerHand = [];
+            discardPile = [];
+            
+            // 發牌
+            for(let i=0; i<HAND_SIZE; i++){
+                playerHand.push(deck.pop());
+            }
+            
+            updateUI();
+            setStatus("請從上方點擊牌背「摸牌」。");
+        }
+
+        // 洗牌演算法
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // 摸牌
+        function drawCard() {
+            if (playerHand.length > HAND_SIZE) {
+                setStatus("你手上的牌太多了！請先點擊手牌「打出」一張牌。");
+                return;
+            }
+            if (deck.length === 0) {
+                setStatus("牌堆沒牌了，流局！");
+                return;
+            }
+            playerHand.push(deck.pop());
+            updateUI();
+            setStatus("摸牌完成，請選擇一張手牌打出。");
+            document.getElementById('win-btn').disabled = false; // 摸牌後可嘗試食糊
+        }
+
+        // 打牌
+        function discardCard(index) {
+            if (playerHand.length <= HAND_SIZE) {
+                setStatus("你現在需要「摸牌」，不能打牌。");
+                return;
+            }
+            // 將牌移至棄牌堆
+            const discarded = playerHand.splice(index, 1)[0];
+            discardPile.push(discarded);
+            updateUI();
+            setStatus("打牌完成，請點擊牌堆摸牌。");
+            document.getElementById('win-btn').disabled = true;
+        }
+
+        // 整理手牌 (簡單按數值排序，字串轉數值)
+        function sortHand() {
+            playerHand.sort((a, b) => {
+                let valA = parseTileValue(a);
+                let valB = parseTileValue(b);
+                return valA - valB;
+            });
+            updateUI();
+        }
+
+        // 將牌面轉化為可比較的數值
+        function parseTileValue(tile) {
+            if (tile === 'x') return 999; // 百搭放最後
+            if (tile === '1/2') return 0.5;
+            if (tile === '2²') return 4;
+            if (tile === '√16') return 4;
+            return parseFloat(tile);
+        }
+
+        // 宣告食糊
+        function declareWin() {
+            if (playerHand.length !== HAND_SIZE + 1) {
+                alert("你需要有 11 張牌才能食糊！");
+                return;
+            }
+            // 這裡可以加入更複雜的數學面子驗證演算法
+            // 目前先讓學生自行舉手讓老師驗證
+            alert(`你宣告食糊！\n你的手牌是: [ ${playerHand.join(', ')} ]\n請向對手或老師展示你的數學組合！`);
+            setStatus("遊戲結束！");
+        }
+
+        // 更新介面
+        function updateUI() {
+            document.getElementById('deck-count').innerText = deck.length;
+            
+            // 渲染手牌
+            const handDiv = document.getElementById('hand-area');
+            handDiv.innerHTML = '';
+            playerHand.forEach((card, index) => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.innerText = card;
+                tile.onclick = () => discardCard(index);
+                handDiv.appendChild(tile);
+            });
+
+            // 渲染棄牌堆
+            const discardDiv = document.getElementById('discard-area');
+            discardDiv.innerHTML = '';
+            discardPile.forEach((card) => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.innerText = card;
+                tile.style.cursor = 'default';
+                tile.style.transform = 'none'; // 棄牌不浮動
+                discardDiv.appendChild(tile);
+            });
+        }
+
+        function setStatus(msg) {
+            document.getElementById('status').innerText = msg;
+        }
+
+        // 啟動遊戲
+        window.onload = initGame;
+    </script>
+</body>
+</html>
