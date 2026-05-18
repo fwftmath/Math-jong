@@ -3,155 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>數神麻雀 Math-jong (AI 對戰版)</title>
+    <title>數神麻雀 Math-jong (完整系統版)</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #2E8B57;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2E8B57; color: #fff; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
         h1 { margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        .info-bar { margin-bottom: 15px; font-size: 18px; font-weight: bold; color: #FFD700; }
+        .info-bar { margin-bottom: 10px; font-size: 18px; font-weight: bold; color: #FFD700; }
+        .board { width: 95%; max-width: 900px; background-color: #3CB371; border: 5px solid #8B4513; border-radius: 10px; padding: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); margin-bottom: 15px; text-align: center; }
+        .area-title { margin: 10px 0 5px; font-weight: bold; color: #FFF8DC; font-size: 14px; }
+        .deck-area, .discard-area, .hand-area, .bot-area, .revealed-area { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; min-height: 60px; padding: 10px; background: rgba(0,0,0,0.1); border-radius: 8px; }
+        .bot-area { font-size: 14px; color: #ddd; align-items: center; min-height: 30px; }
         
-        .board {
-            width: 95%;
-            max-width: 900px;
-            background-color: #3CB371;
-            border: 5px solid #8B4513;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .area-title { margin: 10px 0 5px; font-weight: bold; color: #FFF8DC; }
-        .deck-area, .discard-area, .hand-area, .bot-area {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            min-height: 80px;
-            padding: 10px;
-            background: rgba(0,0,0,0.1);
-            border-radius: 8px;
-        }
-        .bot-area { min-height: 40px; font-size: 14px; color: #ddd; align-items: center;}
-
-        /* 麻雀牌 CSS 設計 */
-        .tile {
-            width: 50px;
-            height: 70px;
-            background-color: #FFFAFA;
-            color: #333;
-            border-radius: 5px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 20px;
-            font-weight: bold;
-            box-shadow: 2px 4px 6px rgba(0,0,0,0.3), inset -2px -2px 4px rgba(0,0,0,0.1);
-            user-select: none;
-            transition: transform 0.1s;
-        }
+        .tile { width: 45px; height: 65px; background-color: #FFFAFA; color: #333; border-radius: 5px; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: bold; box-shadow: 2px 4px 6px rgba(0,0,0,0.3), inset -2px -2px 4px rgba(0,0,0,0.1); user-select: none; transition: transform 0.1s; border: 2px solid transparent;}
         .tile.playable { cursor: pointer; }
         .tile.playable:hover { transform: translateY(-5px); background-color: #fff; }
         .tile.deck { background-color: #DAA520; color: transparent; cursor: pointer; }
         .tile.deck:hover { background-color: #FFD700; }
+        .tile.selected { border: 2px solid #FF0000; transform: translateY(-5px); background-color: #ffe6e6; } /* 選中狀態 */
+        .discard-area .tile { width: 35px; height: 50px; font-size: 14px; margin: 2px; }
         
-        /* 棄牌堆特別樣式，稍微縮小 */
-        .discard-area .tile { width: 40px; height: 56px; font-size: 16px; margin: 2px; }
+        /* 攤開的牌 (上/碰/合) */
+        .revealed-group { display: flex; gap: 2px; margin: 0 10px; padding: 5px; background: rgba(255,215,0,0.2); border-radius: 5px; }
+        .revealed-group .tile { width: 35px; height: 50px; font-size: 14px; cursor: default;}
 
-        .controls { display: flex; gap: 15px; margin-top: 10px; }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background-color: #FFD700;
-            color: #8B4513;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
+        .controls { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center;}
+        button { padding: 10px 15px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; background-color: #FFD700; color: #8B4513; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         button:hover { background-color: #FFF8DC; }
         button:disabled { background-color: #ccc; cursor: not-allowed; color: #666; }
-        #status { margin-top: 15px; font-size: 18px; color: #FFF8DC; font-weight: bold; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px;}
+        .btn-danger { background-color: #FF6347; color: white; }
+        .btn-danger:hover { background-color: #FF4500; }
+
+        #status-box { margin-top: 10px; font-size: 16px; color: #FFF8DC; font-weight: bold; background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; width: 95%; max-width: 900px; text-align: center; border: 1px solid #FFD700;}
     </style>
 </head>
 <body>
 
-    <h1>🀄 數神麻雀 Math-jong</h1>
+    <h1>🀄 數神麻雀</h1>
     <div class="info-bar">目前回合：<span id="turn-indicator">玩家</span></div>
 
     <div class="board">
-        <div class="bot-area" id="bot-status">
-            電腦 1 (下家): 10 張牌 | 電腦 2 (對家): 10 張牌 | 電腦 3 (上家): 10 張牌
-        </div>
+        <div class="bot-area" id="bot-status">電腦狀態載入中...</div>
 
-        <div class="area-title">牌堆 - 剩餘: <span id="deck-count">0</span></div>
-        <div class="deck-area" id="deck-area">
-            <div class="tile deck" id="deck-btn" onclick="humanDrawCard()">🀄</div>
-        </div>
+        <div class="area-title">你的攤開牌區 (上/碰/合)</div>
+        <div class="revealed-area" id="revealed-area"></div>
 
-        <div class="area-title">棄牌堆 (大家打出的牌)</div>
-        <div class="discard-area" id="discard-area"></div>
+        <div class="area-title">牌堆 (剩餘: <span id="deck-count">0</span>) &nbsp;|&nbsp; 棄牌堆</div>
+        <div style="display: flex; gap: 20px; justify-content: center; align-items: stretch;">
+            <div class="deck-area" style="min-width: 60px;">
+                <div class="tile deck" id="deck-btn" onclick="humanDrawCard()">🀄</div>
+            </div>
+            <div class="discard-area" id="discard-area" style="flex-grow: 1;"></div>
+        </div>
 
         <div class="area-title">你的手牌</div>
         <div class="hand-area" id="hand-area"></div>
     </div>
 
-    <div class="controls">
+    <div class="controls" id="action-controls">
         <button onclick="sortHand()">整理手牌</button>
         <button onclick="declareWin()" id="win-btn" disabled>宣告食糊！</button>
     </div>
-    <div id="status">遊戲初始化中...</div>
+    
+    <div class="controls" id="claim-controls" style="display: none;">
+        <button class="btn-danger" onclick="confirmClaim()" id="confirm-claim-btn" disabled>確認組合並搶牌</button>
+        <button onclick="cancelClaim()">放棄 (跳過)</button>
+    </div>
+
+    <div id="status-box">遊戲初始化中...</div>
 
     <script>
-        const baseCards = ['-3', '-2', '-1', '0', '1', '2', '3', '4', '5', '1/2', '0.5', '2²', '4', '√16', 'x'];
+        const baseCards = ['-3', '-2', '-1', '0', '1', '2', '3', '4', '5', '1/2', '0.5', '2²', '4', '√16'];
         let deck = [];
         let discardPile = [];
-        
-        // 4名玩家：0是人類，1、2、3是電腦
         let players = [
-            { id: 0, name: "你 (玩家)", hand: [], isBot: false },
-            { id: 1, name: "電腦 1 (下家)", hand: [], isBot: true },
-            { id: 2, name: "電腦 2 (對家)", hand: [], isBot: true },
-            { id: 3, name: "電腦 3 (上家)", hand: [], isBot: true }
+            { id: 0, name: "你 (玩家)", hand: [], revealed: [], isBot: false },
+            { id: 1, name: "下家 (電腦)", hand: [], revealed: [], isBot: true },
+            { id: 2, name: "對家 (電腦)", hand: [], revealed: [], isBot: true },
+            { id: 3, name: "上家 (電腦)", hand: [], revealed: [], isBot: true }
         ];
         
         const HAND_SIZE = 10;
-        let currentTurn = 0; // 0代表玩家回合
-        let hasDrawnThisTurn = false; // 記錄當前玩家是否已經摸牌
+        let currentTurn = 0; 
+        let hasDrawnThisTurn = false;
+        
+        // 狀態管理：NORMAL (正常打牌), CLAIM_PROMPT (問你要不要搶)
+        let gameState = 'NORMAL'; 
+        let pendingDiscard = null; // 記錄剛被打出，可以被搶的牌
+        let selectedForClaim = []; // 玩家點擊準備用來搶牌的2張手牌索引
 
         function initGame() {
-            // 生成牌堆並洗牌 (15種牌 x 4張 = 60張)
             deck = [];
-            for (let i = 0; i < 4; i++) {
-                deck = deck.concat(baseCards);
-            }
+            for (let i = 0; i < 4; i++) deck = deck.concat(baseCards);
             shuffle(deck);
-            
             discardPile = [];
             
-            // 為4位玩家發牌
-            players.forEach(player => {
-                player.hand = [];
-                for(let i=0; i<HAND_SIZE; i++){
-                    player.hand.push(deck.pop());
-                }
+            players.forEach(p => {
+                p.hand = []; p.revealed = [];
+                for(let i=0; i<HAND_SIZE; i++) p.hand.push(deck.pop());
             });
             
-            currentTurn = 0; // 由人類玩家先開始
+            currentTurn = 0; 
             hasDrawnThisTurn = false;
+            gameState = 'NORMAL';
             
             updateUI();
-            setStatus("遊戲開始！請點擊牌堆摸牌。");
-            document.getElementById('deck-btn').style.pointerEvents = 'auto';
+            setStatus("遊戲開始！請點擊左側黃色牌背摸牌。");
         }
 
         function shuffle(array) {
@@ -161,150 +116,292 @@
             }
         }
 
-        // ================= 人類玩家動作 =================
+        // ================= 數值轉換與數學驗證 =================
+
+        function parseVal(c) {
+            if (c === '1/2') return 0.5;
+            if (c === '2²') return 4;
+            if (c === '√16') return 4;
+            return parseFloat(c);
+        }
+
+        // 檢查3張牌是否構成 面子 (上/碰/合)
+        function isValidMeld(c1, c2, c3) {
+            let v1 = parseVal(c1), v2 = parseVal(c2), v3 = parseVal(c3);
+            let arr = [v1, v2, v3].sort((a,b)=>a-b);
+            
+            // 1. 碰 (等值)
+            if (arr[0] === arr[1] && arr[1] === arr[2]) return true;
+            
+            // 2. 吃 (等差數列)
+            let diff1 = arr[1] - arr[0];
+            let diff2 = arr[2] - arr[1];
+            if (diff1 === diff2 && diff1 !== 0) return true;
+            
+            // 3. 合 (方程式 a+b=c 或 a*b=c) 考慮所有排列組合
+            let perms = [
+                [v1,v2,v3], [v1,v3,v2], [v2,v1,v3], 
+                [v2,v3,v1], [v3,v1,v2], [v3,v2,v1]
+            ];
+            for(let p of perms) {
+                if (p[0] + p[1] === p[2]) return true;
+                if (p[0] * p[1] === p[2]) return true;
+            }
+            return false;
+        }
+
+        // 檢查2張牌是否構成 眼 (相同 或 相反數)
+        function isValidPair(c1, c2) {
+            let v1 = parseVal(c1), v2 = parseVal(c2);
+            return (v1 === v2) || (v1 + v2 === 0);
+        }
+
+        // ================= 食糊演算法 (Backtracking) =================
+        function checkWinCondition(handCards) {
+            if (handCards.length % 3 !== 2) return false; // 必須是 2, 5, 8, 11 張牌
+
+            // 尋找眼
+            for (let i = 0; i < handCards.length; i++) {
+                for (let j = i + 1; j < handCards.length; j++) {
+                    if (isValidPair(handCards[i], handCards[j])) {
+                        let remaining = [...handCards];
+                        remaining.splice(j, 1);
+                        remaining.splice(i, 1);
+                        // 如果剩下的牌能全部分成面子，就贏了
+                        if (checkRemainingMelds(remaining)) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkRemainingMelds(cards) {
+            if (cards.length === 0) return true;
+            
+            // 鎖定第一張牌，去尋找能跟它組成面子的另外兩張
+            for (let i = 1; i < cards.length; i++) {
+                for (let j = i + 1; j < cards.length; j++) {
+                    if (isValidMeld(cards[0], cards[i], cards[j])) {
+                        let remaining = [...cards];
+                        remaining.splice(j, 1);
+                        remaining.splice(i, 1);
+                        remaining.splice(0, 1); // 刪除 cards[0]
+                        if (checkRemainingMelds(remaining)) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // ================= 玩家與電腦操作 =================
 
         function humanDrawCard() {
-            if (currentTurn !== 0) {
-                setStatus("現在不是你的回合！");
-                return;
-            }
-            if (hasDrawnThisTurn) {
-                setStatus("你已經摸過牌了，請打出一張牌。");
-                return;
-            }
-            if (deck.length === 0) {
-                setStatus("牌堆沒牌了，流局！");
-                return;
-            }
+            if (currentTurn !== 0 || gameState !== 'NORMAL') return;
+            if (hasDrawnThisTurn) { setStatus("你已摸牌，請打出一張牌。"); return; }
+            if (deck.length === 0) { setStatus("流局！"); return; }
 
             players[0].hand.push(deck.pop());
             hasDrawnThisTurn = true;
-            
             updateUI();
-            setStatus("摸牌完成，請選擇一張手牌打出。");
+            setStatus("摸牌完成，請點擊手牌打出。");
             document.getElementById('win-btn').disabled = false;
         }
 
-        function humanDiscardCard(index) {
-            if (currentTurn !== 0) return;
-            if (!hasDrawnThisTurn) {
-                setStatus("你必須先摸牌，才能打牌。");
+        function toggleCardSelection(index) {
+            // 如果是在選牌準備搶牌的狀態
+            if (gameState === 'CLAIM_PROMPT') {
+                let pos = selectedForClaim.indexOf(index);
+                if (pos > -1) {
+                    selectedForClaim.splice(pos, 1); // 取消選取
+                } else {
+                    if (selectedForClaim.length < 2) selectedForClaim.push(index);
+                }
+                
+                // 檢查是否選滿2張且符合數學規則
+                const btn = document.getElementById('confirm-claim-btn');
+                if (selectedForClaim.length === 2) {
+                    let c1 = players[0].hand[selectedForClaim[0]];
+                    let c2 = players[0].hand[selectedForClaim[1]];
+                    if (isValidMeld(pendingDiscard, c1, c2)) {
+                        btn.disabled = false;
+                        setStatus(`組合有效！[${pendingDiscard}], [${c1}], [${c2}]。請點擊「確認組合並搶牌」`);
+                    } else {
+                        btn.disabled = true;
+                        setStatus("這三張牌無法組成等值、等差或運算式！請重新選擇。");
+                    }
+                } else {
+                    btn.disabled = true;
+                    setStatus(`你目前選了 ${selectedForClaim.length} 張，請從手牌選 2 張與 [${pendingDiscard}] 組合。`);
+                }
+                updateUI();
                 return;
             }
 
-            const discardedCard = players[0].hand.splice(index, 1)[0];
-            discardPile.push(discardedCard);
-            
-            document.getElementById('win-btn').disabled = true;
-            
-            endTurn(); // 結束玩家回合，交給下一位
+            // 正常打牌狀態
+            if (currentTurn === 0 && hasDrawnThisTurn && gameState === 'NORMAL') {
+                discardPile.push(players[0].hand.splice(index, 1)[0]);
+                document.getElementById('win-btn').disabled = true;
+                endTurn();
+            }
         }
 
-        function sortHand() {
-            players[0].hand.sort((a, b) => {
-                let valA = parseTileValue(a);
-                let valB = parseTileValue(b);
-                return valA - valB;
-            });
+        // ================= 搶牌 (Interrupt) 邏輯 =================
+
+        function promptClaim(card, botName) {
+            gameState = 'CLAIM_PROMPT';
+            pendingDiscard = card;
+            selectedForClaim = [];
+            
+            document.getElementById('action-controls').style.display = 'none';
+            document.getElementById('claim-controls').style.display = 'flex';
+            
+            setStatus(`⏸️ 暫停！${botName} 打出了 [ ${card} ]。\n你可以從手牌選 2 張牌來「上/碰/合」這張牌，或者點擊「放棄」。`);
             updateUI();
         }
 
-        function parseTileValue(tile) {
-            if (tile === 'x') return 999;
-            if (tile === '1/2') return 0.5;
-            if (tile === '2²') return 4;
-            if (tile === '√16') return 4;
-            return parseFloat(tile);
+        function cancelClaim() {
+            gameState = 'NORMAL';
+            pendingDiscard = null;
+            selectedForClaim = [];
+            document.getElementById('action-controls').style.display = 'flex';
+            document.getElementById('claim-controls').style.display = 'none';
+            
+            // 恢復原本的流程，輪到下一個人
+            setTimeout(endTurn, 500); 
         }
 
-        // ================= 回合與電腦 AI 邏輯 =================
+        function confirmClaim() {
+            // 將牌從棄牌堆拿走
+            discardPile.pop(); 
+            
+            // 從手牌中移除那兩張牌 (從後面刪除以避免索引偏移)
+            selectedForClaim.sort((a,b)=>b-a);
+            let meld = [pendingDiscard];
+            meld.push(players[0].hand.splice(selectedForClaim[0], 1)[0]);
+            meld.push(players[0].hand.splice(selectedForClaim[1], 1)[0]);
+            
+            // 放入攤開區
+            players[0].revealed.push(meld);
+            
+            // 搶牌成功後，回合強制切換回玩家，並要求打出一張牌
+            gameState = 'NORMAL';
+            currentTurn = 0;
+            hasDrawnThisTurn = true; // 視同已摸牌
+            pendingDiscard = null;
+            selectedForClaim = [];
+            
+            document.getElementById('action-controls').style.display = 'flex';
+            document.getElementById('claim-controls').style.display = 'none';
+            document.getElementById('win-btn').disabled = false;
+            
+            updateUI();
+            setStatus("搶牌成功！請打出一張牌。");
+        }
+
+
+        // ================= 流程控制 =================
 
         function endTurn() {
             hasDrawnThisTurn = false;
-            currentTurn = (currentTurn + 1) % 4; // 0->1->2->3->0 循環
+            currentTurn = (currentTurn + 1) % 4;
             updateUI();
 
             if (currentTurn !== 0) {
-                // 如果是電腦回合，鎖定玩家操作，並呼叫 AI
-                document.getElementById('deck-btn').style.pointerEvents = 'none';
                 setStatus(`等待 ${players[currentTurn].name} 思考中...`);
-                
-                // 設定 1.5 秒延遲，讓人類有時間看清楚節奏
-                setTimeout(botTurn, 1500); 
+                setTimeout(botTurn, 1000); 
             } else {
-                // 輪回人類玩家
-                document.getElementById('deck-btn').style.pointerEvents = 'auto';
                 setStatus("輪到你了！請摸牌。");
             }
         }
 
         function botTurn() {
             let bot = players[currentTurn];
+            if (deck.length === 0) return;
             
-            // 1. 電腦摸牌
-            if (deck.length === 0) {
-                setStatus("牌堆沒牌了，流局！");
-                return;
-            }
-            bot.hand.push(deck.pop());
+            bot.hand.push(deck.pop()); // 摸牌
             
-            // 2. 電腦打牌 (等級 1：完全隨機挑選一張手牌)
-            // 產生 0 到 10 (共11張牌) 的隨機索引
-            let randomIndex = Math.floor(Math.random() * bot.hand.length);
-            let discardedCard = bot.hand.splice(randomIndex, 1)[0];
-            discardPile.push(discardedCard);
+            // 電腦隨機打牌
+            let rIdx = Math.floor(Math.random() * bot.hand.length);
+            let discarded = bot.hand.splice(rIdx, 1)[0];
+            discardPile.push(discarded);
             
-            setStatus(`${bot.name} 打出了 [ ${discardedCard} ]`);
+            updateUI();
             
-            // 3. 結束電腦回合，交給下一個
-            // 再加一點短暫延遲讓玩家看到它打什麼，再進入下一回合
-            setTimeout(endTurn, 1000);
+            // 打出牌後，觸發人類玩家的「搶牌詢問」
+            promptClaim(discarded, bot.name);
         }
 
-        // ================= 介面更新 =================
+        // ================= UI 與功能 =================
+        
+        function sortHand() {
+            players[0].hand.sort((a, b) => parseVal(a) - parseVal(b));
+            updateUI();
+        }
 
         function declareWin() {
-            if (players[0].hand.length !== HAND_SIZE + 1) return;
-            alert(`你宣告食糊！\n你的手牌是: [ ${players[0].hand.join(', ')} ]\n請向老師展示你的數學組合！`);
+            if (players[0].hand.length % 3 !== 2) {
+                alert("牌數不對！必須剛好摸完牌才能宣告。"); return;
+            }
+            
+            // 使用 Backtracking 演算法驗證
+            if (checkWinCondition(players[0].hand)) {
+                setStatus(`🎉 恭喜！你成功食糊了！\n完全符合數學規則！`);
+                alert("🎉 恭喜！系統判定你的數學組合完全正確！你贏了！");
+                gameState = 'GAME_OVER';
+            } else {
+                alert("❌ 錯誤！系統無法在你的手牌中找到「3組面子 + 1對眼」。請再檢查一下你的數學邏輯！");
+            }
         }
 
         function updateUI() {
             document.getElementById('turn-indicator').innerText = players[currentTurn].name;
             document.getElementById('deck-count').innerText = deck.length;
             
-            // 更新電腦狀態文字
             document.getElementById('bot-status').innerText = 
-                `電腦 1 (下家): ${players[1].hand.length} 張牌 | ` +
-                `電腦 2 (對家): ${players[2].hand.length} 張牌 | ` +
-                `電腦 3 (上家): ${players[3].hand.length} 張牌`;
+                `下家電腦: ${players[1].hand.length}張 | 對家電腦: ${players[2].hand.length}張 | 上家電腦: ${players[3].hand.length}張`;
 
-            // 渲染玩家手牌
+            // 渲染手牌
             const handDiv = document.getElementById('hand-area');
             handDiv.innerHTML = '';
             players[0].hand.forEach((card, index) => {
                 const tile = document.createElement('div');
-                tile.className = 'tile playable';
+                tile.className = `tile playable ${selectedForClaim.includes(index) ? 'selected' : ''}`;
                 tile.innerText = card;
-                tile.onclick = () => humanDiscardCard(index);
+                tile.onclick = () => toggleCardSelection(index);
                 handDiv.appendChild(tile);
+            });
+
+            // 渲染已攤開的牌 (上/碰)
+            const revDiv = document.getElementById('revealed-area');
+            revDiv.innerHTML = '';
+            players[0].revealed.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'revealed-group';
+                group.forEach(card => {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile'; tile.innerText = card;
+                    groupDiv.appendChild(tile);
+                });
+                revDiv.appendChild(groupDiv);
             });
 
             // 渲染棄牌堆
             const discardDiv = document.getElementById('discard-area');
             discardDiv.innerHTML = '';
-            discardPile.forEach((card) => {
+            discardPile.forEach((card, idx) => {
                 const tile = document.createElement('div');
                 tile.className = 'tile';
                 tile.innerText = card;
+                // 強調最後一張被打出的牌
+                if (idx === discardPile.length - 1 && gameState === 'CLAIM_PROMPT') {
+                    tile.style.border = "2px solid #FF0000";
+                    tile.style.backgroundColor = "#ffe6e6";
+                }
                 discardDiv.appendChild(tile);
             });
         }
 
-        function setStatus(msg) {
-            document.getElementById('status').innerText = msg;
-        }
-
-        // 啟動遊戲
+        function setStatus(msg) { document.getElementById('status-box').innerText = msg; }
         window.onload = initGame;
     </script>
 </body>
