@@ -71,7 +71,21 @@
     <div id="status-box">遊戲初始化中...</div>
 
     <script>
-        const baseCards = ['-3', '-2', '-1', '0', '1', '2', '3', '4', '5', '1/2', '0.5', '2²', '4', '√16'];
+        const cardDictionary = {
+            '0/5': 0,    '1-1': 0,
+            '(-1)²': 1,  '|-1|': 1,   '100%': 1,
+            '√4': 2,     '10/5': 2,   '|-2|': 2,
+            '√9': 3,     '|-3|': 3,   '1+2': 3,
+            '2²': 4,     '√16': 4,    '8/2': 4,
+            '√25': 5,    '10/2': 5,
+            '1-2': -1,   '-|-1|': -1,
+            '-√4': -2,   '2-4': -2,
+            '1/2': 0.5,  '50%': 0.5,  '0.5': 0.5,
+            'x': 999,    'y': 999  // 百搭牌
+        };
+
+        // 自動從字典提取所有牌面來生成基本牌組
+        const baseCards = Object.keys(cardDictionary);
         let deck = [];
         let discardPile = [];
         let players = [
@@ -119,10 +133,11 @@
         // ================= 數值轉換與數學驗證 =================
 
         function parseVal(c) {
-            if (c === '1/2') return 0.5;
-            if (c === '2²') return 4;
-            if (c === '√16') return 4;
-            return parseFloat(c);
+            if (cardDictionary[c] !== undefined) {
+                return cardDictionary[c];
+            }
+            // 備用防錯：如果字典找不到，嘗試將字串轉為數字
+            return parseFloat(c); 
         }
 
         // 檢查3張牌是否構成 面子 (上/碰/合)
